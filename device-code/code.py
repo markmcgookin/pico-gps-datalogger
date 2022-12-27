@@ -1,43 +1,39 @@
-import adafruit_gps
+# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
+# SPDX-License-Identifier: MIT
+
+"""
+This test will initialize the display using displayio and draw a solid green
+background, a smaller purple rectangle, and some yellow text..
+"""
 import board
 import busio
-import digitalio
+import terminalio
+import displayio
+import neopixel
 import time
+import digitalio
+
+from adafruit_display_text import label
+from adafruit_st7789 import ST7789
+
+# New stuff for GPS module
+import adafruit_gps
+
+# New stuff for SD card
 import directory_functions
 
-# Setup/Define a bunch of stuff.
-RX = board.GP13
-TX = board.GP12
-uart = busio.UART(TX, RX, baudrate=9600, timeout=30)
-gps = adafruit_gps.GPS(uart, debug=False)
-led = digitalio.DigitalInOut(board.LED)
-led.direction = digitalio.Direction.OUTPUT
-
-## This was just a quick test to show storing code on the sd card and running it.
-## Just keeping it around for reference.
-#import hellodave
-#with open("/sd/hellodave.py", "w") as f:
-#    f.write("print('Hello big davey boy')")
+print("Starting")
 
 # Mount the SD card and print its contents
 directory_functions.mount_sd_card()
 directory_functions.print_directory("/sd")
 
-def _format_datetime(datetime):
-    return "{:02}/{:02}/{} {:02}:{:02}:{:02}".format(
-        datetime.tm_mon,
-        datetime.tm_mday,
-        datetime.tm_year,
-        datetime.tm_hour,
-        datetime.tm_min,
-        datetime.tm_sec,
-    )
-
-def flash_led():
-    if led.value == True:
-        led.value = False
-    else:
-        led.value = True
+# UART GPS Stuff
+# Setup/Define a bunch of stuff.
+RX = board.GP1
+TX = board.GP0
+uart = busio.UART(TX, RX, baudrate=9600, timeout=30)
+gps = adafruit_gps.GPS(uart, debug=False)
 
 # Turn on the basic GGA and RMC info (what you typically want)
 gps.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
@@ -45,100 +41,186 @@ gps.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
 # Set update rate to once a second (1hz) which is what you typically want.
 gps.send_command(b'PMTK220,1000')
 
+# ON BOARD LED
+led = digitalio.DigitalInOut(board.LED)
+led.direction = digitalio.Direction.OUTPUT
+
+
+# NEOPIXEL
+pixels = neopixel.NeoPixel(board.GP28, 1, auto_write=False, brightness=0.1)
+
+def setNeoPixel(r, g, b):
+    pixels[0] = (r, g, b)
+    pixels.show()
+    
+setNeoPixel(255,0,255)
+neoPixelOn = True
+
+# Setup stuff for display
+BORDER_WIDTH = 28
+TEXT_SCALE = 3
+
+# Release any resources currently in use for the displays
+displayio.release_displays()
+
+tft_cs = board.GP5
+tft_dc = board.GP6
+tft_rst = board.GP7
+
+spi = busio.SPI(board.GP2, board.GP3, board.GP4)
+display_bus = displayio.FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=tft_rst)
+
+display = ST7789(display_bus, width=320, height=172, colstart=34, rotation=270)
+
+# Make the display context
+splash = displayio.Group()
+display.show(splash)
+
+color_bitmap = displayio.Bitmap(display.width, display.height, 1)
+color_palette = displayio.Palette(1)
+color_palette[0] = 0x00FF00  # Bright Green
+bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
+splash.append(bg_sprite)
+
+# Draw a smaller inner rectangle
+inner_bitmap = displayio.Bitmap(
+    display.width - (BORDER_WIDTH * 2), display.height - (BORDER_WIDTH * 2), 1
+)
+
+inner_palette = displayio.Palette(1)
+inner_palette[0] = 0xAA0088  # Purple
+inner_sprite = displayio.TileGrid(
+    inner_bitmap, pixel_shader=inner_palette, x=BORDER_WIDTH, y=BORDER_WIDTH
+)
+splash.append(inner_sprite)
+
+# Draw a label.
+text_area = label.Label(
+    terminalio.FONT,
+    text="Hello World!!",
+    color=0xFFFF00,
+    scale=TEXT_SCALE,
+    anchor_point=(0.5, 0.5),
+    anchored_position=(display.width // 2, display.height // 2),
+)
+splash.append(text_area)
+
 last_print = time.monotonic()
-count = 0
-
-## Print out a GPS log to make sure we are writing it ok
-#with open("/sd/gps_log.log", "rt") as f:
-#    data = f.read()
-#    print(data)
-
 filename = directory_functions.get_next_logfilename("/sd", "gps_logfile")
 print("Got filename: " + filename)
-
-with open(filename, "w") as f:
-    while True:
-        gps.update()
+lasterror = ""
+lastTime = ""
+count = 0
+while True:
+    try:
         current = time.monotonic()
-
+        
+        if lasterror != "":
+            with open(filename, "w") as f:
+                f.write("Caught Value Error, last time seen: " + lastTime)
+                f.flush()
+        
         if current - last_print >= 1.0:
-            # Flash the LED once every second so we know we are running
-            flash_led() # TODO - Flash NeoPixel Green
+            with open(filename, "w") as f:
+                gps.update()
+                last_print = current
 
-            last_print = current
-            if not gps.has_fix:
-                # TODO - Flash NeoPixel Red
-                print(str(count))
+                print("Loop " + str(count))
                 count = count + 1
-                print('Waiting for fix...')
-                continue
 
-            local_time = time.localtime()
-            print('=' * 40)
-            f.write('=' * 40)
+                if led.value == True:
+                    led.value = False
+                else:
+                    led.value = True
+                            
+                if not gps.has_fix:
+                    # TODO - Flash NeoPixel Red.
+                    print('Waiting for fix...')
+                    if neoPixelOn:
+                        setNeoPixel(0,0,0) #Flash it off
+                        neoPixelOn = False
+                    else:
+                        setNeoPixel(255,0,0) #Flash it red
+                        neoPixelOn = True
+                    continue
+                
+                # We have a GPS fix
+                if neoPixelOn:
+                    setNeoPixel(0,0,0) #Flash it off
+                    neoPixelOn = False
+                else:
+                    setNeoPixel(0,0,255) #Flash it red
+                    neoPixelOn = True
+                
+                print('=' * 40)
+                f.write('=' * 40)
+                lastTime = "Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(
+                        gps.timestamp_utc.tm_mon,  # Grab parts of the time from the
+                        gps.timestamp_utc.tm_mday,  # struct_time object that holds
+                        gps.timestamp_utc.tm_year,  # the fix time.  Note you might
+                        gps.timestamp_utc.tm_hour,  # not get all data like year, day,
+                        gps.timestamp_utc.tm_min,  # month!
+                        gps.timestamp_utc.tm_sec,
+                    )
+                    
+                print(lastTime)
+                f.write(lastTime)
+                
+                print("Latitude: {0:.6f} degrees".format(gps.latitude))
+                f.write("Latitude: {0:.6f} degrees".format(gps.latitude))
 
-            print(
-                "Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(
-                    gps.timestamp_utc.tm_mon,  # Grab parts of the time from the
-                    gps.timestamp_utc.tm_mday,  # struct_time object that holds
-                    gps.timestamp_utc.tm_year,  # the fix time.  Note you might
-                    gps.timestamp_utc.tm_hour,  # not get all data like year, day,
-                    gps.timestamp_utc.tm_min,  # month!
-                    gps.timestamp_utc.tm_sec,
+                print("Longitude: {0:.6f} degrees".format(gps.longitude))
+                f.write("Longitude: {0:.6f} degrees".format(gps.longitude))
+
+                print(
+                    "Precise Latitude: {:2.}{:2.4f} degrees".format(
+                        gps.latitude_degrees, gps.latitude_minutes
+                    )
                 )
-            )
-            print("Latitude: {0:.6f} degrees".format(gps.latitude))
-            f.write("Latitude: {0:.6f} degrees".format(gps.latitude))
-
-            print("Longitude: {0:.6f} degrees".format(gps.longitude))
-            f.write("Longitude: {0:.6f} degrees".format(gps.longitude))
-
-            print(
-                "Precise Latitude: {:2.}{:2.4f} degrees".format(
-                    gps.latitude_degrees, gps.latitude_minutes
+                f.write
+                (
+                    "Precise Latitude: {:2.}{:2.4f} degrees".format(
+                        gps.latitude_degrees, gps.latitude_minutes
+                    )
                 )
-            )
-            f.write
-            (
-                "Precise Latitude: {:2.}{:2.4f} degrees".format(
-                    gps.latitude_degrees, gps.latitude_minutes
+
+                print(
+                    "Precise Longitude: {:2.}{:2.4f} degrees".format(
+                        gps.longitude_degrees, gps.longitude_minutes
+                    )
                 )
-            )
-
-            print(
-                "Precise Longitude: {:2.}{:2.4f} degrees".format(
-                    gps.longitude_degrees, gps.longitude_minutes
+                f.write(
+                    "Precise Longitude: {:2.}{:2.4f} degrees".format(
+                        gps.longitude_degrees, gps.longitude_minutes
+                    )
                 )
-            )
-            f.write(
-                "Precise Longitude: {:2.}{:2.4f} degrees".format(
-                    gps.longitude_degrees, gps.longitude_minutes
-                )
-            )
 
-            print("Fix quality: {}".format(gps.fix_quality))
-            f.write("Fix quality: {}".format(gps.fix_quality))
+                print("Fix quality: {}".format(gps.fix_quality))
+                f.write("Fix quality: {}".format(gps.fix_quality))
 
-            # Some attributes beyond latitude, longitude and timestamp are optional
-            # and might not be present.  Check if they're None before trying to use!
-            if gps.satellites is not None:
-                print("# satellites: {}".format(gps.satellites))
-                f.write("# satellites: {}".format(gps.satellites))
-            if gps.altitude_m is not None:
-                print("Altitude: {} meters".format(gps.altitude_m))
-                f.write("Altitude: {} meters".format(gps.altitude_m))
-            if gps.speed_knots is not None:
-                print("Speed: {} knots".format(gps.speed_knots))
-                f.write("Speed: {} knots".format(gps.speed_knots))
-            if gps.track_angle_deg is not None:
-                print("Track angle: {} degrees".format(gps.track_angle_deg))
-                f.write("Track angle: {} degrees".format(gps.track_angle_deg))
-            if gps.horizontal_dilution is not None:
-                print("Horizontal dilution: {}".format(gps.horizontal_dilution))
-                f.write("Horizontal dilution: {}".format(gps.horizontal_dilution))
-            if gps.height_geoid is not None:
-                print("Height geoid: {} meters".format(gps.height_geoid))
-                f.write("Height geoid: {} meters".format(gps.height_geoid))
+                # Some attributes beyond latitude, longitude and timestamp are optional
+                # and might not be present.  Check if they're None before trying to use!
+                if gps.satellites is not None:
+                    print("# satellites: {}".format(gps.satellites))
+                    f.write("# satellites: {}".format(gps.satellites))
+                if gps.altitude_m is not None:
+                    print("Altitude: {} meters".format(gps.altitude_m))
+                    f.write("Altitude: {} meters".format(gps.altitude_m))
+                if gps.speed_knots is not None:
+                    print("Speed: {} knots".format(gps.speed_knots))
+                    f.write("Speed: {} knots".format(gps.speed_knots))
+                if gps.track_angle_deg is not None:
+                    print("Track angle: {} degrees".format(gps.track_angle_deg))
+                    f.write("Track angle: {} degrees".format(gps.track_angle_deg))
+                if gps.horizontal_dilution is not None:
+                    print("Horizontal dilution: {}".format(gps.horizontal_dilution))
+                    f.write("Horizontal dilution: {}".format(gps.horizontal_dilution))
+                if gps.height_geoid is not None:
+                    print("Height geoid: {} meters".format(gps.height_geoid))
+                    f.write("Height geoid: {} meters".format(gps.height_geoid))
 
-            f.flush()
-            count = 0
+                f.flush()
+                
+    except ValueError:
+        lasterror = "value error caught"
+        
