@@ -7,10 +7,11 @@
   (title_block
     (title "RPI Pico - SPI Display with Neopixel - GPS and SD Card")
     (date "2022-12-28")
-    (rev "0.3")
+    (rev "0.4")
     (company "Mark McGookin")
     (comment 1 "Incremental Board for development")
     (comment 2 "Added SD Card pinouts and GPS footprint")
+    (comment 3 "Fixed power to board. 5v now not 3v3")
   )
 
   (lib_symbols
@@ -2224,22 +2225,6 @@
     (pin "1" (uuid 22260245-4e4d-4a95-8a14-5375ccc3c1e0))
   )
 
-  (symbol (lib_id "power:+3.3V") (at 192.405 52.705 0) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
-    (uuid 1b6001ca-a9dd-470b-bac3-68a19915bebc)
-    (property "Reference" "#PWR014" (id 0) (at 192.405 56.515 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "+3.3V" (id 1) (at 192.405 47.625 0))
-    (property "Footprint" "" (id 2) (at 192.405 52.705 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (id 3) (at 192.405 52.705 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 74fb5063-30f0-4612-b98c-84c9aed13bfe))
-  )
-
   (symbol (lib_id "power:VBUS") (at 24.765 26.67 0) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 28af086a-151e-463f-a077-c674bda7a1a4)
@@ -2450,6 +2435,22 @@
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid c04af440-4d92-40b7-bd09-5a64a0f6ae24))
+  )
+
+  (symbol (lib_id "power:VBUS") (at 192.405 52.705 0) (unit 1)
+    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (uuid 6113a20f-0551-4d08-8eb3-c085f12c0a6f)
+    (property "Reference" "#PWR0101" (id 0) (at 192.405 56.515 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "VBUS" (id 1) (at 192.405 46.99 0))
+    (property "Footprint" "" (id 2) (at 192.405 52.705 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (id 3) (at 192.405 52.705 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 018ad822-bb3a-4cc6-a781-a874782afc44))
   )
 
   (symbol (lib_id "Connector:Conn_01x08_Female") (at 101.6 90.805 180) (unit 1)
@@ -2938,14 +2939,14 @@
     (path "/44cfa447-b17f-4252-a8b4-e1a4a05820da"
       (reference "#PWR013") (unit 1) (value "GND") (footprint "")
     )
-    (path "/1b6001ca-a9dd-470b-bac3-68a19915bebc"
-      (reference "#PWR014") (unit 1) (value "+3.3V") (footprint "")
-    )
     (path "/b4615784-a348-46bf-be0a-a96c7aeacf33"
       (reference "#PWR015") (unit 1) (value "VBUS") (footprint "")
     )
     (path "/28b7fea8-5330-4727-a446-e0cd515a5637"
       (reference "#PWR016") (unit 1) (value "GND") (footprint "")
+    )
+    (path "/6113a20f-0551-4d08-8eb3-c085f12c0a6f"
+      (reference "#PWR0101") (unit 1) (value "VBUS") (footprint "")
     )
     (path "/05a4009a-7485-4cda-964e-1e4baabf6d92"
       (reference "C1") (unit 1) (value "22u") (footprint "Capacitor_SMD:C_0603_1608Metric")
