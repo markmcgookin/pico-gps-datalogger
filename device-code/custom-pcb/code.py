@@ -112,8 +112,8 @@ def updateTextArea(displayText):
     color=0xFFFF00,
     scale=TEXT_SCALE,
     anchor_point=(0.5, 0.5),
-    anchored_position=(display.width // 2, display.height // 2),
-)
+    anchored_position=(display.width // 2, display.height // 2)
+    )
 
 # Draw a label.
 text_area = updateTextArea(screen_text)
