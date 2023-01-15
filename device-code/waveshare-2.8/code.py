@@ -91,6 +91,7 @@ print("Got filename: " + filename)
 
 # Clock, MOSI, MISO
 while True:
+
     current = time.monotonic()
 
     position_A.update()

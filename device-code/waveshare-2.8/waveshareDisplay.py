@@ -31,16 +31,14 @@ main_group = displayio.Group()
 MEDIUM_FONT = bitmap_font.load_font("fonts/LeagueSpartan-Bold-16.bdf")
 TIME_PAUSE = 2
 
-#bitmap = displayio.Bitmap(4, display.width, 2)
+bitmap = displayio.Bitmap(4, display.width, 2)
 palette = displayio.Palette(2)
-palette[0] = 0x004400
-palette[1] = 0x00FFFF
-#horizontal_line = displayio.TileGrid(bitmap, pixel_shader=palette, x=155, y=0)
-#main_group.append(horizontal_line)
+palette[0] = 0x808080
+#palette[1] = 0x00FFFF
 
-#bitmap = displayio.Bitmap(display.width, 4, 2)
-#vertical_line = displayio.TileGrid(bitmap, pixel_shader=palette, x=0, y=110)
-#main_group.append(vertical_line)
+bitmap = displayio.Bitmap(display.width, 4, 2)
+horizontal_line = displayio.TileGrid(bitmap, pixel_shader=palette, x=0, y=200)
+main_group.append(horizontal_line)
 
 # Tests
 header_text_area = label.Label(MEDIUM_FONT, text="GPS POSITION")
