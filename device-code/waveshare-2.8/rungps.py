@@ -42,6 +42,14 @@ position_B_input = digitalio.DigitalInOut(board.GP3)
 position_B_input.switch_to_input(pull=digitalio.Pull.UP)
 position_B = Debouncer(position_B_input);
 
+button_blue_input = digitalio.DigitalInOut(board.GP17)
+button_blue_input.switch_to_input(pull=digitalio.Pull.UP)
+button_blue = Debouncer(button_blue_input);
+
+button_red_input = digitalio.DigitalInOut(board.GP16)
+button_red_input.switch_to_input(pull=digitalio.Pull.UP)
+button_red = Debouncer(button_red_input);
+
 position_A.update()
 position_B.update()
 
@@ -68,24 +76,23 @@ gps.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
 gps.send_command(b'PMTK220,1000')
 
 # Wifi Stuff
-updateText("Connecting to %s" % usersecrets["ssid"])
-time.sleep(1)
-wifi.radio.connect(usersecrets["ssid"], usersecrets["password"])
-updateText("Connected to %s!" % usersecrets["ssid"])
-time.sleep(1)
-updateText("my IP addr: %s" % wifi.radio.ipv4_address)
-time.sleep(2)
+#updateText("Connecting to %s" % usersecrets["ssid"])
+#time.sleep(1)
+#wifi.radio.connect(usersecrets["ssid"], usersecrets["password"])
+#updateText("Connected to %s!" % usersecrets["ssid"])
+#time.sleep(1)
+#updateText("my IP addr: %s" % wifi.radio.ipv4_address)
+#time.sleep(2)
 
-pool = socketpool.SocketPool(wifi.radio)
-request = adafruit_requests.Session(pool, ssl.create_default_context())
+#pool = socketpool.SocketPool(wifi.radio)
+#request = adafruit_requests.Session(pool, ssl.create_default_context())
 
-updateText("Fetching wifitest.adafruit.com...");
-time.sleep(1)
-response = request.get("http://wifitest.adafruit.com/testwifi/index.html")
-updateText(str(response.status_code))
-time.sleep(2)
-updateText(response.text)
-
+#updateText("Fetching wifitest.adafruit.com...");
+#time.sleep(1)
+#response = request.get("http://wifitest.adafruit.com/testwifi/index.html")
+#updateText(str(response.status_code))
+#time.sleep(2)
+#updateText(response.text)
 
 last_print = time.monotonic()
 filename = get_next_logfilename("/sd", "gps_logfile")
@@ -98,6 +105,18 @@ while True:
 
     position_A.update()
     position_B.update()
+    button_blue.update()
+    button_red.update()
+    
+    if button_blue.fell:
+        updateText("Blue Just pressed")
+    #if button_blue.rose:
+    #    updateText("Blue Just released")
+
+    if button_red.fell:
+        updateText("Red Just pressed")
+    #if button_red.rose:
+    #    updateText("Red Just released")
 
     if position_A.fell:
         # Switch moved to the up position from the middle, turn on the display
